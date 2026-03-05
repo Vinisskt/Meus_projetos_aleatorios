@@ -2,254 +2,218 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
-#define WIDTH 30
-#define HEIGHT 60
+#define WIDTH 40
+#define HEIGHT 25
 
-typedef struct SnakePiece
-{
-	int x;
-	int y;
-	struct SnakePiece *next;
-
+typedef struct SnakePiece {
+  int x;
+  int y;
+  struct SnakePiece *next;
 } SnakePiece;
 
 struct termios old, new;
 
-char screen[WIDTH][HEIGHT];
+char screen[HEIGHT][WIDTH];
 
-void drawBody(SnakePiece *head, int *index);
-void Bodymove(SnakePiece *head);
-void randomFood(int *index);
+void drawBody(SnakePiece *head, int *foodIndex);
+void Bodymove(SnakePiece *head, int oldHeadX, int oldHeadY);
+void randomFood(int *foodIndex);
 void cleanTerminal();
-void movimentationSnakePiece(SnakePiece *head, char *inputkeyboard, char *lastinput, int *index);
+void movimentationSnakePiece(SnakePiece *head, char *inputkeyboard,
+                             char *lastinput, int *foodIndex);
 void createPieceSnake(SnakePiece *head);
 void newModeTerminal(struct termios *old, struct termios *new);
 void returnModeTerminal(struct termios *old);
-void insertHead(SnakePiece *head);
 void startScreen();
 void printScreen();
+int checkCollision(SnakePiece *head);
+void printGameOver();
 
-int main()
-{
-	// start head snake
-	SnakePiece *head = malloc(sizeof(SnakePiece));
-	if (head == NULL)
-	{
-		printf("head NULL");
-		return 1;
-	}
-	head->next= NULL;
+int main() {
+  srand(time(NULL));
 
+  // Inicia a cabeça da cobra
+  SnakePiece *head = malloc(sizeof(SnakePiece));
+  if (head == NULL) {
+    printf("Erro ao alocar cabeça\n");
+    return 1;
+  }
+  head->x = WIDTH / 2;
+  head->y = HEIGHT / 2;
+  head->next = NULL;
 
-	SnakePiece *body = malloc(sizeof(SnakePiece));
-	if (body == NULL)
-	{
-		printf("head NULL");
-		return 1;
-	}
+  // Adiciona um primeiro pedaço de corpo
+  createPieceSnake(head);
 
-	body->next = NULL;
-	head->next = body;
+  char inputkeyboard = 0;
+  char lastinput;
+  int foodIndex[2];
 
-	char inputkeyboard;
-	char lastinput;
-	int index[2];
+  newModeTerminal(&old, &new);
+  startScreen();
+  randomFood(foodIndex);
 
-	head->x = 15;
-	head->y = 30;
+  while (1) {
+    cleanTerminal();
 
-	body->x = head->x;
-	body->y = head->y;
+    if (checkCollision(head)) {
+      returnModeTerminal(&old);
+      printGameOver();
+      return 0;
+    }
 
-	newModeTerminal(&old, &new);
-	startScreen();
-	randomFood(index);
-	while (1)
-	{	
-		if (index[0] == head->x && index[1] == head->y)
-		{
-			randomFood(index);
-			createPieceSnake(head);
-		}
-		movimentationSnakePiece(head, &inputkeyboard, &lastinput, index);
-		Bodymove(head);
-		printScreen();
-		usleep(100000);
-		cleanTerminal();
-	}
-	
-	returnModeTerminal(&old);
-	return 0;
+    if (foodIndex[0] == head->x && foodIndex[1] == head->y) {
+      createPieceSnake(head);
+      randomFood(foodIndex);
+    }
+
+    movimentationSnakePiece(head, &inputkeyboard, &lastinput, foodIndex);
+    printScreen();
+    usleep(100000);
+  }
+
+  returnModeTerminal(&old);
+  return 0;
 }
 
-void drawBody(SnakePiece *head, int *index)
-{
-	cleanTerminal();
-	screen[index[0]][index[1]] = '@';
-
-	SnakePiece *current = head;
-	SnakePiece *prev = NULL;
-
-	while (current != NULL)
-	{
-		screen[current->x][current->y] = '#';
-		current = current->next;
-	}
-
-}
-void randomFood(int *index)
-{
-	srand(time(NULL));
-
-	index[0] = rand() % WIDTH-1;
-	index[1] = rand() % HEIGHT-1;
-
+void printGameOver() {
+  printf("\n  GAME OVER  \n");
+  printf("    #####    \n");
+  printf("  #       #  \n");
+  printf("  # X   X #  \n");
+  printf("  #  ...  #  \n");
+  printf("  # .   . #  \n");
+  printf("  #       #  \n");
+  printf("    #####    \n\n");
 }
 
-void cleanTerminal()
-{
-	printf("\033[H\033[J");
-	return;
+int checkCollision(SnakePiece *head) {
+  if (head->x < 0 || head->x >= WIDTH || head->y < 0 || head->y >= HEIGHT) {
+    return 1;
+  }
+
+  return 0;
 }
 
-void movimentationSnakePiece(SnakePiece *head ,char *inputkeyboard, char *lastinput, int *index)
-{
-	read(STDIN_FILENO, inputkeyboard, 1);
-	
-	if (*inputkeyboard != 'h' && *inputkeyboard != 'j' && *inputkeyboard != 'k' && *inputkeyboard != 'l')
-	{
-		*lastinput = *lastinput;
-	}
-	else 
-	{
-		*lastinput = *inputkeyboard;
-	}
-	
-	switch (*lastinput) 
-	{
-		case 'k':
-			head->x--;
-			break;
-		case 'j':
-			head->x++;
-			break;
-		case 'h':
-			head->y--;
-			break;
-		case 'l':
-			head->y++;
-			break;
-	}
-	drawBody(head, index);
-	return;
+void drawBody(SnakePiece *head, int *foodIndex) {
+  screen[foodIndex[1]][foodIndex[0]] = '@';
+
+  SnakePiece *current = head;
+  while (current != NULL) {
+    if (current->y >= 0 && current->y < HEIGHT && current->x >= 0 &&
+        current->x < WIDTH) {
+      screen[current->y][current->x] = '#';
+    }
+    current = current->next;
+  }
 }
 
-void createPieceSnake(SnakePiece *head)
-{
-	SnakePiece *bodypiece = malloc(sizeof(SnakePiece));
-	if (bodypiece == NULL)
-	{
-		printf("Error allocated memory");
-		return;
-	}
-	
-	bodypiece->x = head->x;
-	bodypiece->y = head->y;
-	bodypiece->next = NULL;
-
-	SnakePiece *current = head;
-	while (current->next != NULL)
-	{
-		current = current->next;
-	}
-	current->next = bodypiece;;
-
-	return;
+void randomFood(int *foodIndex) {
+  foodIndex[0] = rand() % WIDTH;
+  foodIndex[1] = rand() % HEIGHT;
 }
 
-void Bodymove(SnakePiece *head)
-{	
-	SnakePiece *current = head;
-	SnakePiece *prev = NULL;
+void cleanTerminal() { printf("\033[H\033[J"); }
 
-	while (current->next != NULL)
-	{
-		prev = current;
-		current = current->next;
-	}
-	
-	SnakePiece *copyfrom = head;
+void movimentationSnakePiece(SnakePiece *head, char *inputkeyboard,
+                             char *lastinput, int *foodIndex) {
+  if (read(STDIN_FILENO, inputkeyboard, 1) > 0) {
+    if (*inputkeyboard == 'h' || *inputkeyboard == 'j' ||
+        *inputkeyboard == 'k' || *inputkeyboard == 'l') {
+      *lastinput = *inputkeyboard;
+    }
+  }
 
-	int tempX = copyfrom->x;
-	int tempY = copyfrom->y;
-	
-	SnakePiece *copyto = head->next;
+  int oldX = head->x;
+  int oldY = head->y;
 
-	while (copyto != NULL)
-	{
-		int savex = copyto->x;
-		int savey = copyto->y;
-		copyto->x = tempX;
-		copyto->y = tempY;
-		copyfrom = copyto;
-		tempX = savex;
-		tempY = savey;
-		copyto = copyfrom->next;
-	}
+  switch (*lastinput) {
+  case 'k':
+    head->y--;
+    break; // Cima
+  case 'j':
+    head->y++;
+    break; // Baixo
+  case 'h':
+    head->x--;
+    break; // Esquerda
+  case 'l':
+    head->x++;
+    break; // Direita
+  }
 
-	screen[tempX][tempY] = '.';
-	return;
+  Bodymove(head, oldX, oldY);
+  drawBody(head, foodIndex);
 }
 
-void newModeTerminal(struct termios *old, struct termios *new)
-{
-	tcgetattr(STDIN_FILENO, old);
-	*new = *old;
-	new->c_lflag &= ~(ICANON | ECHO);
-	new->c_cc[VMIN] = 0;
-	new->c_cc[VTIME] = 0;
-	tcsetattr(STDIN_FILENO, TCSANOW, new);
-	return;
+void createPieceSnake(SnakePiece *head) {
+  SnakePiece *newPiece = malloc(sizeof(SnakePiece));
+  if (newPiece == NULL)
+    return;
+
+  SnakePiece *current = head;
+  while (current->next != NULL) {
+    current = current->next;
+  }
+
+  newPiece->x = current->x;
+  newPiece->y = current->y;
+  newPiece->next = NULL;
+  current->next = newPiece;
 }
 
-void returnModeTerminal(struct termios *old)
-{
-	tcsetattr(STDIN_FILENO, TCSANOW, old);
-	return;
+void Bodymove(SnakePiece *head, int oldHeadX, int oldHeadY) {
+  SnakePiece *current = head->next;
+  int prevX = oldHeadX;
+  int prevY = oldHeadY;
+
+  while (current != NULL) {
+    int tempX = current->x;
+    int tempY = current->y;
+
+    current->x = prevX;
+    current->y = prevY;
+
+    prevX = tempX;
+    prevY = tempY;
+
+    current = current->next;
+  }
+
+  if (prevY >= 0 && prevY < HEIGHT && prevX >= 0 && prevX < WIDTH) {
+    screen[prevY][prevX] = '.';
+  }
 }
 
-void insertHead(SnakePiece *head)
-{
-	screen[head->x][head->y] = '#';
-	return;
+void newModeTerminal(struct termios *old, struct termios *new) {
+  tcgetattr(STDIN_FILENO, old);
+  *new = *old;
+  new->c_lflag &= ~(ICANON | ECHO);
+  new->c_cc[VMIN] = 0;
+  new->c_cc[VTIME] = 0;
+  tcsetattr(STDIN_FILENO, TCSANOW, new);
 }
 
-void startScreen()
-{
-	for (int i = 0; i < WIDTH; i++)
-	{
-		for (int j = 0; j < HEIGHT; j++)
-		{
-			screen[i][j] = '.';
-		}
-	}
-	return;
+void returnModeTerminal(struct termios *old) {
+  tcsetattr(STDIN_FILENO, TCSANOW, old);
 }
 
-void printScreen()
-{	
-	for (int i = 0; i < WIDTH; i++)
-	{
-		printf("\n");
-		for (int j = 0; j < HEIGHT; j++)
-		{
-			printf("%c", screen[i][j]);
-		}
-	}
-	return;
+void startScreen() {
+  for (int i = 0; i < HEIGHT; i++) {
+    for (int j = 0; j < WIDTH; j++) {
+      screen[i][j] = '.';
+    }
+  }
 }
 
-
+void printScreen() {
+  for (int i = 0; i < HEIGHT; i++) {
+    for (int j = 0; j < WIDTH; j++) {
+      printf("%c", screen[i][j]);
+    }
+    printf("\n");
+  }
+}
