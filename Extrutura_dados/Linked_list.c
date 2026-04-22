@@ -52,7 +52,6 @@ void Free_Item_list(Node *node, char *item) {
 
   while (current != NULL) {
     if (current->value == *item) {
-      if ()
         temp = current;
       current = current->next;
       prev->next = current;
