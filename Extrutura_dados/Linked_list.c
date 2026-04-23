@@ -45,19 +45,32 @@ void Free_Linked_list(Node *node) {
   }
 }
 
-void Free_Item_list(Node *node, char *item) {
+void  Free_Item_list(Node *node, char *item, Node **head) {
   Node *current = node;
   Node *prev = current;
   Node *temp;
+  
+  if (node == NULL) {
+    return;
+  }
+
+  if (current->value == *item) {
+    temp = current;
+    current = current->next;
+    *head  = current;
+    free(temp);
+    return;
+  }
 
   while (current != NULL) {
     if (current->value == *item) {
-        temp = current;
+      temp = current;
       current = current->next;
       prev->next = current;
       free(temp);
       break;
     }
+
     prev = current;
     current = current->next;
   }
@@ -90,7 +103,7 @@ int main(void) {
   Print_list(node);
 
   char character = getchar();
-  Free_Item_list(node, &character);
+  Free_Item_list(node, &character, &node);
 
   Print_list(node);
   return 0;
