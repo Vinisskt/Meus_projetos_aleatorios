@@ -5,7 +5,6 @@
 
 #define SIZE_WORD 10
 #define SIZE_HASH 26
-#define LETTERS 26
 
 typedef struct Node {
 	char word[SIZE_WORD];
@@ -62,6 +61,11 @@ int load_hash(Node *hash[SIZE_HASH]) {
 	
 	char word[SIZE_WORD];
 	FILE *file = fopen("palavras.txt", "r");
+	if (file == NULL) {
+		printf("file not found");
+		return 1;
+	}
+
 	while (fscanf(file, "%s", word) != EOF ) {
 		Node *new_node = create_node(word);
 		if (check_node(new_node) == 1) {
