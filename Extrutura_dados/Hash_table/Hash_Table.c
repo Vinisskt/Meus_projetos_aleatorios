@@ -18,6 +18,7 @@ int check_index_word(Node *node);
 void start_hash(Node *hash[SIZE_HASH]);
 void print_hash(Node *hash[SIZE_HASH]);
 void free_hash(Node *hash[SIZE_HASH]);
+void print_words(Node *hash[SIZE_HASH]);
 
 int main(void) {
 
@@ -109,3 +110,17 @@ void free_hash(Node *hash[SIZE_HASH]) {
 	return;
 }
 
+int check_index_print(char *character) {
+	return tolower(*character) - 'a';
+}
+
+void print_words(Node *hash[SIZE_HASH]) {
+	char character = getchar();
+	int index = check_index_print(&character);
+	Node *current = hash[index];
+	while (current != NULL) {
+		printf("%s", current->word);
+		current = current->next;
+	}
+	return;
+}
