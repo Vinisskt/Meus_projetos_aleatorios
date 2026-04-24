@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -38,7 +39,7 @@ void start_hash(Node *hash[SIZE_HASH]) {
 }
 
 int check_index_word(Node *node) {
-	return node->word[0] - 'a';
+	return tolower(node->word[0]) - 'a';
 }
 
 int check_node(Node *node) {
